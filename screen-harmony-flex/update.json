@@ -17,18 +17,18 @@
     }
   },
   "stable": {
-    "version": "2.9.1",
+    "version": "2.9.2",
     "minVersion": "2.0.0",
     "releaseDate": "2026-09-18",
     "updateType": "OPTIONAL",
-    "deprecationMessage": "Your installed version has reached end-of-life and can no longer synchronize. Please update to 2.9.1 to continue.",
+    "deprecationMessage": "Your installed version has reached end-of-life and can no longer synchronize. Please update to 2.9.2 to continue.",
     "changelog": [
-      "Multi-Step Parent Account Setup: Username, Password, and Email with instant availability checking.",
-      "12-Word Master Recovery Key: One-tap Copy Phrase and Download Key with Android share sheet support.",
-      "Compact In-App Update Card: Top-of-screen update notification with direct download & install.",
-      "Exact Alarms & Schedule Automation: Full Android 12-14+ support with auto-rescheduling.",
-      "Multi-OEM Anti-Tamper: Intercepts uninstallation across Xiaomi, Oppo, Vivo, and Huawei.",
-      "Resolved Infinite Loading: Added timeout protection and responsive scrolling across all setup dialogs."
+      "Multi-Step Parent Account Wizard: Clean 3-step setup with real-time availability checks.",
+      "12-Word Recovery Phrase: One-tap Copy and Download/Share buttons for offline key backups.",
+      "Infinite Loading Fix: Exterminated endless spinner loops with 3.5s timeout and offline fallback.",
+      "Responsive UI Overhaul: Smooth scrolling dialogs with adaptive keyboard and screen layout handling.",
+      "Compact Update Cards: Docked directly at the top of Block and Parenting dashboards.",
+      "Laser Alarms & Anti-Tamper: Android 12-14+ exact scheduling and multi-OEM force-stop shields."
     ],
     "downloads": {
       "directApk": "https://github.com/SubhamSathua/screen-harmony-flex/releases/latest/download/app-prod-universal-release.apk",
@@ -39,22 +39,22 @@
     "sha256": ""
   },
   "alpha": {
-    "version": "2.9.1-alpha",
+    "version": "2.9.2-alpha",
     "minVersion": "2.4.0",
     "releaseDate": "2026-09-18",
     "updateType": "OPTIONAL",
     "deprecationMessage": "Experimental build expired. Download the newest alpha iteration.",
     "changelog": [
-      "Multi-Step Parent Account Setup: Username, Password, and Email with instant availability checking.",
-      "12-Word Master Recovery Key: One-tap Copy Phrase and Download Key with Android share sheet support.",
-      "Compact In-App Update Engine: Top-of-screen update card with direct download and SHA-256 validation.",
-      "Exact Alarm & Schedule Automation: Full Android 12-14+ support with auto-rescheduling.",
-      "Multi-OEM Anti-Tamper Shield: Intercepts uninstallation across Xiaomi, Oppo, Vivo, and Huawei.",
-      "Resolved Infinite Loading: Added timeout protection and responsive scrolling across all setup dialogs."
+      "Multi-Step Parent Account Wizard: Clean 3-step setup with real-time availability checks.",
+      "12-Word Recovery Phrase: One-tap Copy and Download/Share buttons for offline key backups.",
+      "Infinite Loading Fix: Exterminated endless spinner loops with 3.5s timeout and offline fallback.",
+      "Responsive UI Overhaul: Smooth scrolling dialogs with adaptive keyboard and screen layout handling.",
+      "Compact Update Cards: Docked directly at the top of Block and Parenting dashboards.",
+      "Laser Alarms & Anti-Tamper: Android 12-14+ exact scheduling and multi-OEM force-stop shields."
     ],
     "downloads": {
-      "directApk": "https://github.com/SubhamSathua/screen-harmony-flex/releases/download/v2.9.1-alpha/app-alpha-universal-release.apk",
-      "github": "https://github.com/SubhamSathua/screen-harmony-flex/releases/tag/v2.9.1-alpha",
+      "directApk": "https://github.com/SubhamSathua/screen-harmony-flex/releases/download/v2.9.2-alpha/app-alpha-universal-release.apk",
+      "github": "https://github.com/SubhamSathua/screen-harmony-flex/releases/tag/v2.9.2-alpha",
       "obtainium": "obtainium://add/https://github.com/SubhamSathua/screen-harmony-flex",
       "fdroid": "https://f-droid.org/packages/com.prism.screenharmony.flex"
     },
