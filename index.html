@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>In-App Update Manifest &amp; Engine Specification</title>
+  <!-- Google Fonts: Nunito & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,700;1,400&family=Nunito:ital,wght@0,300;0,400;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Nunito', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            brand: {
+              50: '#f8fafc',
+              100: '#f1f5f9',
+              800: '#1e293b',
+              900: '#0f172a',
+              accent: '#2563eb',
+              critical: '#dc2626',
+              warning: '#d97706',
+              alpha: '#7c3aed',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Strict Zero Corner Radius rule for all elements */
+    *, *::before, *::after {
+      border-radius: 0px !important;
+    }
+    html {
+      scroll-behavior: smooth;
+    }
+    pre code {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    /* Custom scrollbar matching square brutalist/clean look */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #475569;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-200 font-sans antialiased selection:bg-blue-600 selection:text-white">
+
+  <header class="sticky top-0 z-50 bg-slate-900 border-b border-slate-800 backdrop-blur">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <span class="font-mono text-xs uppercase tracking-widest px-2 py-0.5 bg-blue-600/20 text-blue-400 border border-blue-500/40">RFC-042</span>
+        <h1 class="text-lg sm:text-xl font-extrabold tracking-tight text-white flex items-center space-x-2">
+          <span>Updater Spec</span>
+          <span class="text-slate-500 font-normal text-sm hidden sm:inline">| Remote Manifest Engine</span>
+        </h1>
+      </div>
+      <nav class="hidden md:flex items-center space-x-6 text-sm font-medium">
+        <a href="#full-json" class="text-slate-300 hover:text-white transition-colors">Manifest JSON</a>
+        <a href="#dictionary" class="text-slate-300 hover:text-white transition-colors">Key Dictionary</a>
+        <a href="#states" class="text-slate-300 hover:text-white transition-colors">Evaluation States</a>
+        <a href="#killswitches" class="text-slate-300 hover:text-white transition-colors">Kill Switches</a>
+        <a href="#flow" class="text-slate-300 hover:text-white transition-colors">Decision Tree</a>
+      </nav>
+      <div>
+        <button id="copy-json-btn" onclick="copyJsonManifest()" class="px-3 py-1.5 text-xs font-mono font-bold bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 transition">
+          COPY JSON
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-16">
+
+    <section class="border border-slate-800 bg-slate-900/60 p-6 sm:p-8">
+      <div class="max-w-3xl space-y-4">
+        <div class="inline-flex items-center space-x-2">
+          <span class="h-2 w-2 bg-emerald-500"></span>
+          <span class="font-mono text-xs uppercase tracking-wider text-emerald-400">Production Specification</span>
+        </div>
+        <h2 class="text-2xl sm:text-4xl font-black text-white tracking-tight leading-tight">
+          Client-Driven In-App Update Engine &amp; Manifest Protocol
+        </h2>
+        <p class="text-slate-300 text-base sm:text-lg leading-relaxed font-light">
+          A zero-backend update orchestration architecture powered by a single static <code class="font-mono text-xs bg-slate-800 px-1 py-0.5 text-blue-400">update.json</code> served via GitHub Pages or a CDN edge. Designed for Android and multi-platform open-source clients requiring fine-grained release ring control, architectural asset matching, and remote emergency lockdown capabilities.
+        </p>
+      </div>
+      <div class="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-4 border-t border-slate-800 pt-6">
+        <div>
+          <div class="font-mono text-xs text-slate-500 uppercase">Version Floor</div>
+          <div class="font-bold text-slate-200 mt-1">Enforced Min Build</div>
+        </div>
+        <div>
+          <div class="font-mono text-xs text-slate-500 uppercase">Multi-Ring</div>
+          <div class="font-bold text-slate-200 mt-1">Stable / Beta / Alpha</div>
+        </div>
+        <div>
+          <div class="font-mono text-xs text-slate-500 uppercase">Kill Switch</div>
+          <div class="font-bold text-slate-200 mt-1">Global &amp; Per-Channel</div>
+        </div>
+        <div>
+          <div class="font-mono text-xs text-slate-500 uppercase">Integrity</div>
+          <div class="font-bold text-slate-200 mt-1">SHA-256 Digest</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="full-json" class="space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
+        <div>
+          <h3 class="text-xl font-bold text-white tracking-tight">1. The Master Manifest Schema</h3>
+          <p class="text-xs text-slate-400 mt-0.5">Save this complete payload as <code class="font-mono text-blue-400">update.json</code> on GitHub Pages or CDN.</p>
+        </div>
+        <div class="flex items-center space-x-2">
+          <span id="copy-status" class="text-xs font-mono text-emerald-400 hidden">Copied to clipboard!</span>
+          <button onclick="copyJsonManifest()" class="px-3 py-1 text-xs font-mono bg-blue-600 hover:bg-blue-500 text-white border border-blue-400 font-bold transition">
+            Copy Schema
+          </button>
+        </div>
+      </div>
+
+      <div class="border border-slate-800 bg-slate-900 overflow-hidden">
+        <div class="bg-slate-950 px-4 py-2 border-b border-slate-800 flex items-center justify-between text-xs font-mono text-slate-400">
+          <span>payload / update.json</span>
+          <span class="text-emerald-400">application/json</span>
+        </div>
+        <pre class="p-4 sm:p-6 overflow-x-auto text-xs sm:text-sm font-mono text-slate-300 leading-relaxed max-h-[580px]"><code id="raw-json">{
+  "killSwitch": {
+    "global": {
+      "enabled": false,
+      "title": "Service Temporarily Suspended",
+      "message": "All app operations are temporarily paused for backend database maintenance. No action is required. Please check back shortly."
+    },
+    "alpha": {
+      "enabled": false,
+      "title": "Alpha Testing Ring Paused",
+      "message": "A critical memory leak was discovered in the v1.4.0 alpha tree. Alpha usage is halted while an emergency build is prepared."
+    },
+    "beta": {
+      "enabled": false,
+      "title": "Beta Staging Paused",
+      "message": "Beta builds are temporarily locked due to scheduled authentication server migration."
+    }
+  },
+  "stable": {
+    "versionCode": 105,
+    "versionName": "1.2.0",
+    "minSupportedVersionCode": 102,
+    "releaseDate": "2026-09-07",
+    "updateType": "OPTIONAL",
+    "deprecationMessage": "Your installed version has reached end-of-life and can no longer synchronize. Please update to 1.2.0 to continue.",
+    "changelog": [
+      "Security: Patched session token leakage across webview boundaries.",
+      "Performance: Optimized SQL queries cutting startup duration by 35%.",
+      "Feature: Added native system font selector and dark mode toggle."
+    ],
+    "downloads": {
+      "directApk": "https://github.com/USERNAME/REPO/releases/download/v1.2.0/hub-stable.apk",
+      "github": "https://github.com/USERNAME/REPO/releases/tag/v1.2.0",
+      "obtainium": "obtainium://add/https://github.com/USERNAME/REPO",
+      "fdroid": "https://f-droid.org/packages/YOUR.PACKAGE.NAME"
+    },
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "beta": {
+    "versionCode": 106,
+    "versionName": "1.3.0-beta.2",
+    "minSupportedVersionCode": 104,
+    "releaseDate": "2026-09-07",
+    "updateType": "RECOMMENDED",
+    "deprecationMessage": "This beta milestone has lapsed. Update immediately to prevent staging sync timeouts.",
+    "changelog": [
+      "Preview: New peer-to-peer manifest indexing engine.",
+      "Fix: Addressed intermittent crash during bulk import."
+    ],
+    "downloads": {
+      "directApk": "https://github.com/USERNAME/REPO/releases/download/v1.3.0-beta.2/hub-beta.apk",
+      "github": "https://github.com/USERNAME/REPO/releases/tag/v1.3.0-beta.2",
+      "obtainium": "obtainium://add/https://github.com/USERNAME/REPO"
+    },
+    "sha256": "7a35e4d298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b899"
+  },
+  "alpha": {
+    "versionCode": 107,
+    "versionName": "1.4.0-alpha.1",
+    "minSupportedVersionCode": 106,
+    "releaseDate": "2026-09-07",
+    "updateType": "OPTIONAL",
+    "deprecationMessage": "Experimental build expired. Download the newest nightly iteration.",
+    "changelog": [
+      "Experimental: Completely redesigned navigation rail.",
+      "Warning: Local SQLite database structure is in active churn."
+    ],
+    "downloads": {
+      "directApk": "https://github.com/USERNAME/REPO/releases/download/v1.4.0-alpha.1/hub-alpha.apk",
+      "github": "https://github.com/USERNAME/REPO/releases/tag/v1.4.0-alpha.1",
+      "obtainium": "obtainium://add/https://github.com/USERNAME/REPO"
+    },
+    "sha256": "cca9e3c988e01083431f476a6cf5ebca5f72e382b6b0c2049e7b25bc8885b546"
+  }
+}</code></pre>
+      </div>
+    </section>
+
+    <section id="dictionary" class="space-y-6">
+      <div class="border-b border-slate-800 pb-3">
+        <h3 class="text-xl font-bold text-white tracking-tight">2. Key-Value Dictionary &amp; Type Definitions</h3>
+        <p class="text-xs text-slate-400 mt-0.5">Exhaustive definitions, validation constraints, and behavioral guarantees for every schema token.</p>
+      </div>
+
+      <div class="space-y-4">
+
+        <!-- killSwitch Block -->
+        <div class="border border-slate-800 bg-slate-900/40 p-5 space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+            <span class="font-mono text-sm font-bold text-rose-400">"killSwitch"</span>
+            <span class="font-mono text-xs text-slate-500 uppercase">Object &bull; Scoped Lockdowns</span>
+          </div>
+          <p class="text-sm text-slate-300">
+            Encompasses emergency controls that immediately halt client execution without requiring an APK compilation or deployment. Evaluated before any version comparison.
+          </p>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2">
+            <div class="border border-slate-800 p-3 bg-slate-950">
+              <span class="font-mono text-xs text-red-400 font-bold block mb-1">.global</span>
+              <span class="text-xs text-slate-400">Blocks every user across all channels (Stable, Beta, Alpha). Used for zero-day server outages or severe database risks.</span>
+            </div>
+            <div class="border border-slate-800 p-3 bg-slate-950">
+              <span class="font-mono text-xs text-amber-400 font-bold block mb-1">.beta</span>
+              <span class="text-xs text-slate-400">Blocks only clients currently running builds belonging to the Beta channel ring.</span>
+            </div>
+            <div class="border border-slate-800 p-3 bg-slate-950">
+              <span class="font-mono text-xs text-purple-400 font-bold block mb-1">.alpha</span>
+              <span class="text-xs text-slate-400">Blocks only clients currently running nightly or alpha testing builds.</span>
+            </div>
+          </div>
+          <div class="bg-slate-950 border border-slate-800 p-3 font-mono text-xs space-y-1">
+            <div class="text-slate-400"><span class="text-blue-400">enabled</span>: <span class="text-yellow-400">Boolean</span> &mdash; When <code class="text-emerald-400">true</code>, app locks out immediately.</div>
+            <div class="text-slate-400"><span class="text-blue-400">title</span>: <span class="text-yellow-400">String</span> &mdash; Modal header displayed on the blocking overlay.</div>
+            <div class="text-slate-400"><span class="text-blue-400">message</span>: <span class="text-yellow-400">String</span> &mdash; Explanatory paragraph informing the user why the app is temporarily unavailable.</div>
+          </div>
+        </div>
+
+        <!-- Channel Config Object -->
+        <div class="border border-slate-800 bg-slate-900/40 p-5 space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+            <span class="font-mono text-sm font-bold text-blue-400">"stable" | "beta" | "alpha"</span>
+            <span class="font-mono text-xs text-slate-500 uppercase">Channel Config Objects</span>
+          </div>
+          <p class="text-sm text-slate-300">
+            Contains release definitions for a specific distribution track. The client determines which track to consume based on user settings.
+          </p>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border border-slate-800 text-xs font-sans">
+              <thead class="bg-slate-950 font-mono text-slate-400 border-b border-slate-800">
+                <tr>
+                  <th class="p-3">Key</th>
+                  <th class="p-3">Type</th>
+                  <th class="p-3">Purpose &amp; Client Rule</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-800 font-light text-slate-300">
+                <tr>
+                  <td class="p-3 font-mono text-blue-400 font-medium">versionCode</td>
+                  <td class="p-3 font-mono text-yellow-500">Integer</td>
+                  <td class="p-3">Strictly monotonic positive integer. The sole source of truth for checking if an update exists: <code class="font-mono bg-slate-800 px-1 text-slate-200">remote.versionCode &gt; local.versionCode</code>.</td>
+                </tr>
+                <tr>
+                  <td class="p-3 font-mono text-blue-400 font-medium">versionName</td>
+                  <td class="p-3 font-mono text-yellow-500">String</td>
+                  <td class="p-3">Human-facing release label (e.g. <code class="font-mono bg-slate-800 px-1 text-slate-200">"1.2.0"</code>). Strictly for UI presentation; never parse programmatically.</td>
+                </tr>
+                <tr>
+                  <td class="p-3 font-mono text-rose-400 font-medium">minSupportedVersionCode</td>
+                  <td class="p-3 font-mono text-yellow-500">Integer</td>
+                  <td class="p-3 font-medium text-slate-200">The absolute floor. If <code class="font-mono bg-slate-800 px-1 text-rose-300">local.versionCode &lt; minSupportedVersionCode</code>, the app halts all activity and triggers an unconditional hard update, superseding an <code class="font-mono">OPTIONAL</code> updateType.</td>
+                </tr>
+                <tr>
+                  <td class="p-3 font-mono text-blue-400 font-medium">releaseDate</td>
+                  <td class="p-3 font-mono text-yellow-500">String (ISO 8601)</td>
+                  <td class="p-3">Publication stamp formatted as <code class="font-mono">YYYY-MM-DD</code>. Displayed in dialog info tags.</td>
+                </tr>
+                <tr>
+                  <td class="p-3 font-mono text-purple-400 font-medium">updateType</td>
+                  <td class="p-3 font-mono text-yellow-500">Enum String</td>
+                  <td class="p-3">One of: <code class="font-mono text-emerald-400">"OPTIONAL"</code>, <code class="font-mono text-amber-400">"RECOMMENDED"</code>, or <code class="font-mono text-rose-400">"CRITICAL"</code>. Controls dialog dismissibility.</td>
+                </tr>
+                <tr>
+                  <td class="p-3 font-mono text-blue-400 font-medium">deprecationMessage</td>
+                  <td class="p-3 font-mono text-yellow-500">String (Nullable)</td>
+                  <td class="p-3">Contextual message displayed specifically when the client is blocked by <code class="font-mono">minSupportedVersionCode</code>.</td>
+                </tr>
+                <tr>
+                  <td class="p-3 font-mono text-blue-400 font-medium">changelog</td>
+                  <td class="p-3 font-mono text-yellow-500">Array of Strings</td>
+                  <td class="p-3">Line items describing changes. Client renders these as bullet points in the update dialog.</td>
+                </tr>
+                <tr>
+                  <td class="p-3 font-mono text-blue-400 font-medium">downloads</td>
+                  <td class="p-3 font-mono text-yellow-500">Object</td>
+                  <td class="p-3">Dictionary containing distribution URIs for automated download, manual web mirrors, and package managers.</td>
+                </tr>
+                <tr>
+                  <td class="p-3 font-mono text-emerald-400 font-medium">sha256</td>
+                  <td class="p-3 font-mono text-yellow-500">String (64 hex chars)</td>
+                  <td class="p-3">Cryptographic hash of the compiled APK. Checked after download to ensure the binary is not corrupt or tampered with.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Downloads Dictionary -->
+        <div class="border border-slate-800 bg-slate-900/40 p-5 space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+            <span class="font-mono text-sm font-bold text-emerald-400">"downloads" Object</span>
+            <span class="font-mono text-xs text-slate-500 uppercase">Target Links &amp; URIs</span>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-mono">
+            <div class="p-3 bg-slate-950 border border-slate-800 space-y-1">
+              <span class="text-blue-400 font-bold">downloads.directApk</span>
+              <p class="font-sans text-slate-400">Direct HTTPS link to the binary asset. Used by in-app downloaders to silently fetch the payload into the cache directory before passing to the system installer.</p>
+            </div>
+            <div class="p-3 bg-slate-950 border border-slate-800 space-y-1">
+              <span class="text-blue-400 font-bold">downloads.github</span>
+              <p class="font-sans text-slate-400">Web release page URL. Provided for users who prefer downloading via external web browsers.</p>
+            </div>
+            <div class="p-3 bg-slate-950 border border-slate-800 space-y-1">
+              <span class="text-blue-400 font-bold">downloads.obtainium</span>
+              <p class="font-sans text-slate-400">Custom URI scheme (<code class="text-blue-300">obtainium://add/https://...</code>). Tapping this instantly opens the Obtainium app tracker and registers your repository in one step.</p>
+            </div>
+            <div class="p-3 bg-slate-950 border border-slate-800 space-y-1">
+              <span class="text-blue-400 font-bold">downloads.fdroid</span>
+              <p class="font-sans text-slate-400">Direct link to the F-Droid store client package listing. Normally omitted on alpha or nightly release blocks.</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <section id="states" class="space-y-6">
+      <div class="border-b border-slate-800 pb-3">
+        <h3 class="text-xl font-bold text-white tracking-tight">3. Update States &amp; Client Enforcement Modes</h3>
+        <p class="text-xs text-slate-400 mt-0.5">How client UI layers must react across different evaluation triggers.</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+        <!-- OPTIONAL -->
+        <div class="border border-slate-800 bg-slate-900/50 p-6 flex flex-col justify-between">
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="px-2 py-0.5 text-xs font-mono font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">OPTIONAL</span>
+              <span class="text-xs font-mono text-slate-500">Urgency: Low</span>
+            </div>
+            <h4 class="text-base font-bold text-white">Standard Release</h4>
+            <p class="text-xs text-slate-300 leading-relaxed">
+              Standard iterative improvements, minor bug fixes, or non-breaking UI adjustments.
+            </p>
+            <ul class="text-xs text-slate-400 space-y-1.5 pt-2 border-t border-slate-800">
+              <li class="flex items-center space-x-2"><span class="text-emerald-400 font-bold">&bull;</span><span>Dismissible modal or bottom sheet.</span></li>
+              <li class="flex items-center space-x-2"><span class="text-emerald-400 font-bold">&bull;</span><span>Provides "Update Now" and "Later" buttons.</span></li>
+              <li class="flex items-center space-x-2"><span class="text-emerald-400 font-bold">&bull;</span><span>App functions with zero restrictions.</span></li>
+            </ul>
+          </div>
+          <div class="mt-6 pt-4 border-t border-slate-800 text-[11px] font-mono text-slate-500">
+            Dismissible: YES &bull; Blocks App: NO
+          </div>
+        </div>
+
+        <!-- RECOMMENDED -->
+        <div class="border border-slate-800 bg-slate-900/50 p-6 flex flex-col justify-between">
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="px-2 py-0.5 text-xs font-mono font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30">RECOMMENDED</span>
+              <span class="text-xs font-mono text-slate-500">Urgency: Medium</span>
+            </div>
+            <h4 class="text-base font-bold text-white">Advisory Warning</h4>
+            <p class="text-xs text-slate-300 leading-relaxed">
+              Older APIs will sunset soon, or an annoying non-fatal glitch has been remediated.
+            </p>
+            <ul class="text-xs text-slate-400 space-y-1.5 pt-2 border-t border-slate-800">
+              <li class="flex items-center space-x-2"><span class="text-amber-400 font-bold">&bull;</span><span>Dismissible banner or badge.</span></li>
+              <li class="flex items-center space-x-2"><span class="text-amber-400 font-bold">&bull;</span><span>Re-prompts user on subsequent app launches.</span></li>
+              <li class="flex items-center space-x-2"><span class="text-amber-400 font-bold">&bull;</span><span>User can continue working if needed.</span></li>
+            </ul>
+          </div>
+          <div class="mt-6 pt-4 border-t border-slate-800 text-[11px] font-mono text-slate-500">
+            Dismissible: YES &bull; Re-prompts: LAUNCH
+          </div>
+        </div>
+
+        <!-- CRITICAL / MIN SUPPORTED -->
+        <div class="border border-rose-900/50 bg-slate-900/80 p-6 flex flex-col justify-between">
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="px-2 py-0.5 text-xs font-mono font-bold bg-rose-500/20 text-rose-400 border border-rose-500/40">CRITICAL</span>
+              <span class="text-xs font-mono text-rose-400">Urgency: Mandatory</span>
+            </div>
+            <h4 class="text-base font-bold text-white">Compulsory / Floor Trigger</h4>
+            <p class="text-xs text-slate-300 leading-relaxed">
+              Triggered when <code class="text-rose-400 font-mono">updateType == "CRITICAL"</code> OR <code class="text-rose-400 font-mono">local &lt; minSupportedVersionCode</code>.
+            </p>
+            <ul class="text-xs text-slate-400 space-y-1.5 pt-2 border-t border-slate-800">
+              <li class="flex items-center space-x-2"><span class="text-rose-400 font-bold">&bull;</span><span>Non-dismissible full screen modal.</span></li>
+              <li class="flex items-center space-x-2"><span class="text-rose-400 font-bold">&bull;</span><span>System back button and touch-outside disabled.</span></li>
+              <li class="flex items-center space-x-2"><span class="text-rose-400 font-bold">&bull;</span><span>"Later" button completely removed.</span></li>
+            </ul>
+          </div>
+          <div class="mt-6 pt-4 border-t border-rose-900/40 text-[11px] font-mono text-rose-400">
+            Dismissible: NO &bull; Hard Execution Lock
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <section id="flow" class="space-y-6">
+      <div class="border-b border-slate-800 pb-3">
+        <h3 class="text-xl font-bold text-white tracking-tight">4. Interactive Evaluation Simulator</h3>
+        <p class="text-xs text-slate-400 mt-0.5">Test how different client states evaluate against the manifest in real time.</p>
+      </div>
+
+      <div class="border border-slate-800 bg-slate-900 p-6 grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        <!-- Controls Column -->
+        <div class="lg:col-span-5 space-y-4">
+          <div>
+            <label class="block text-xs font-mono text-slate-400 uppercase mb-1">Local Installed VersionCode</label>
+            <input type="number" id="sim-local" value="101" class="w-full bg-slate-950 border border-slate-700 px-3 py-2 text-sm font-mono text-white focus:border-blue-500 focus:outline-none">
+            <span class="text-[11px] text-slate-500">Try 101 (Floor fail), 104 (Needs update), or 105 (Latest).</span>
+          </div>
+
+          <div>
+            <label class="block text-xs font-mono text-slate-400 uppercase mb-1">Client Track Channel</label>
+            <select id="sim-channel" class="w-full bg-slate-950 border border-slate-700 px-3 py-2 text-sm font-mono text-white focus:border-blue-500 focus:outline-none">
+              <option value="stable">stable (Latest: 105, Floor: 102)</option>
+              <option value="beta">beta (Latest: 106, Floor: 104)</option>
+              <option value="alpha">alpha (Latest: 107, Floor: 106)</option>
+            </select>
+          </div>
+
+          <div class="space-y-2 pt-2 border-t border-slate-800">
+            <label class="block text-xs font-mono text-slate-400 uppercase">Simulate Emergency Kill-Switches</label>
+            <div class="flex flex-col space-y-2 text-xs font-mono">
+              <label class="flex items-center space-x-2 cursor-pointer">
+                <input type="checkbox" id="sim-kill-global" class="w-4 h-4 bg-slate-950 border border-slate-700 text-blue-600 focus:ring-0">
+                <span class="text-rose-400 font-bold">killSwitch.global.enabled</span>
+              </label>
+              <label class="flex items-center space-x-2 cursor-pointer">
+                <input type="checkbox" id="sim-kill-channel" class="w-4 h-4 bg-slate-950 border border-slate-700 text-blue-600 focus:ring-0">
+                <span class="text-amber-400 font-bold">killSwitch[channel].enabled</span>
+              </label>
+            </div>
+          </div>
+
+          <button onclick="runSimulation()" class="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-500 text-white font-mono text-xs font-bold tracking-wider uppercase border border-blue-400 transition">
+            Evaluate Logic
+          </button>
+        </div>
+
+        <!-- Result Column -->
+        <div class="lg:col-span-7 bg-slate-950 border border-slate-800 p-6 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+              <span class="font-mono text-xs uppercase text-slate-500">Evaluation Engine Output</span>
+              <span id="sim-badge" class="font-mono text-xs px-2 py-0.5 bg-slate-800 text-slate-300">Ready</span>
+            </div>
+            <div id="sim-result-box" class="py-6 space-y-3">
+              <h4 id="sim-title" class="text-lg font-bold text-white">System Awaiting Run</h4>
+              <p id="sim-description" class="text-sm text-slate-400 leading-relaxed font-light">
+                Configure client version and channel parameters on the left to simulate update engine decision routing.
+              </p>
+            </div>
+          </div>
+          <div id="sim-code-preview" class="p-3 bg-slate-900 border border-slate-800 font-mono text-xs text-slate-400">
+            Status: IDLE &bull; Ready for test
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <section class="border border-slate-800 bg-slate-900/40 p-6 sm:p-8 space-y-6">
+      <div class="border-b border-slate-800 pb-3">
+        <h3 class="text-xl font-bold text-white tracking-tight">5. Fundamental Principles: Why This Architecture Works</h3>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-slate-300">
+        <div class="space-y-2">
+          <h4 class="font-mono text-xs uppercase text-blue-400 font-bold tracking-wider">The Power of Pure Monotonic VersionCodes</h4>
+          <p class="font-light text-slate-400 leading-relaxed">
+            Lexical semantic string parsing (e.g. comparing <code class="font-mono text-slate-200">"1.2.0-rc1"</code> vs <code class="font-mono text-slate-200">"1.2.0-beta.2"</code>) is inherently error-prone across different operating systems. Standardizing on a strictly increasing integer (<code class="font-mono text-slate-200">101 &rarr; 102 &rarr; 103</code>) turns the update test into a bulletproof mathematical evaluation (<code class="font-mono text-blue-400">&gt;</code>).
+          </p>
+        </div>
+
+        <div class="space-y-2">
+          <h4 class="font-mono text-xs uppercase text-emerald-400 font-bold tracking-wider">Cryptographic File Integrity (SHA-256)</h4>
+          <p class="font-light text-slate-400 leading-relaxed">
+            Downloading binary APKs over mobile towers or public Wi-Fi risks connection truncation or hostile MitM injection. By computing the SHA-256 hash of the local download buffer and checking it against the manifest digest, the app prevents corrupt package installs before ever passing the payload to Android's <code class="font-mono text-slate-200">PackageInstaller</code>.
+          </p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="border-t border-slate-800 bg-slate-950 py-8 text-center text-xs font-mono text-slate-500">
+    <div class="max-w-7xl mx-auto px-4 space-y-2">
+      <p>App Update Manifest Engine &bull; Zero Corner Radius Standard &bull; JetBrains Mono &amp; Nunito</p>
+      <p>Designed for GitHub Pages &amp; CDN static deployment.</p>
+    </div>
+  </footer>
+
+  <script>
+    // Copy manifest handler
+    function copyJsonManifest() {
+      const codeElement = document.getElementById('raw-json');
+      const textToCopy = codeElement.innerText || codeElement.textContent;
+      
+      const textArea = document.createElement('textarea');
+      textArea.value = textToCopy;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-999999px';
+      textArea.style.top = '-999999px';
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      
+      try {
+        document.execCommand('copy');
+        const status = document.getElementById('copy-status');
+        status.classList.remove('hidden');
+        setTimeout(() => {
+          status.classList.add('hidden');
+        }, 2500);
+      } catch (err) {
+        console.error('Copy fallback failed', err);
+      }
+      document.body.removeChild(textArea);
+    }
+
+    // Interactive simulator logic
+    function runSimulation() {
+      const localVersion = parseInt(document.getElementById('sim-local').value, 10);
+      const channel = document.getElementById('sim-channel').value;
+      const killGlobal = document.getElementById('sim-kill-global').checked;
+      const killChannel = document.getElementById('sim-kill-channel').checked;
+
+      const badge = document.getElementById('sim-badge');
+      const title = document.getElementById('sim-title');
+      const desc = document.getElementById('sim-description');
+      const codePreview = document.getElementById('sim-code-preview');
+
+      // Manifest dataset for simulation
+      const manifest = {
+        stable: { versionCode: 105, minSupported: 102, type: 'OPTIONAL' },
+        beta: { versionCode: 106, minSupported: 104, type: 'RECOMMENDED' },
+        alpha: { versionCode: 107, minSupported: 106, type: 'OPTIONAL' }
+      };
+
+      const activeConfig = manifest[channel];
+
+      // 1. Global Kill Switch
+      if (killGlobal) {
+        badge.className = "font-mono text-xs px-2 py-0.5 bg-rose-900/60 text-rose-300 border border-rose-500 font-bold";
+        badge.innerText = "LOCKED: GLOBAL KILL-SWITCH";
+        title.innerText = "Service Temporarily Suspended";
+        title.className = "text-lg font-bold text-rose-400";
+        desc.innerText = "A global killswitch is asserted in update.json. The app locks out all interactions on all channels regardless of version.";
+        codePreview.innerText = "Decision: HALT_EXECUTION -> Display lockdown modal (dismissible: false)";
+        return;
+      }
+
+      // 2. Channel Kill Switch
+      if (killChannel) {
+        badge.className = "font-mono text-xs px-2 py-0.5 bg-purple-900/60 text-purple-300 border border-purple-500 font-bold";
+        badge.innerText = `LOCKED: ${channel.toUpperCase()} RING PAUSED`;
+        title.innerText = `${channel.toUpperCase()} Channel Suspended`;
+        title.className = "text-lg font-bold text-purple-400";
+        desc.innerText = `The developer paused the ${channel} track. Stable users remain unaffected, but this client is halted.`;
+        codePreview.innerText = `Decision: HALT_CHANNEL -> Display channel pause banner (channel: ${channel})`;
+        return;
+      }
+
+      // 3. Minimum Supported Floor Test
+      if (localVersion < activeConfig.minSupported) {
+        badge.className = "font-mono text-xs px-2 py-0.5 bg-rose-900/60 text-rose-300 border border-rose-500 font-bold";
+        badge.innerText = "FORCED CRITICAL UPDATE";
+        title.innerText = "Version Deprecated (Mandatory Upgrade)";
+        title.className = "text-lg font-bold text-rose-400";
+        desc.innerText = `Client version (${localVersion}) is strictly below the floor (${activeConfig.minSupported}). Even though the remote update may be marked OPTIONAL, this client is forced to upgrade immediately.`;
+        codePreview.innerText = `Evaluation: local (${localVersion}) < minSupported (${activeConfig.minSupported}) -> Action: Block screen & trigger compulsory update`;
+        return;
+      }
+
+      // 4. Update progression
+      if (activeConfig.versionCode > localVersion) {
+        if (activeConfig.type === 'RECOMMENDED') {
+          badge.className = "font-mono text-xs px-2 py-0.5 bg-amber-900/60 text-amber-300 border border-amber-500 font-bold";
+          badge.innerText = "UPDATE RECOMMENDED";
+          title.innerText = `Recommended Update: v${activeConfig.versionCode}`;
+          title.className = "text-lg font-bold text-amber-400";
+          desc.innerText = `A newer build is ready (${activeConfig.versionCode}). Shows persistent warning banner; user may dismiss to continue usage.`;
+          codePreview.innerText = `Evaluation: remote (${activeConfig.versionCode}) > local (${localVersion}) [RECOMMENDED] -> Show dismissible reminder`;
+        } else {
+          badge.className = "font-mono text-xs px-2 py-0.5 bg-emerald-900/60 text-emerald-300 border border-emerald-500 font-bold";
+          badge.innerText = "OPTIONAL UPDATE";
+          title.innerText = `New Version Available: v${activeConfig.versionCode}`;
+          title.className = "text-lg font-bold text-emerald-400";
+          desc.innerText = `A newer build is available (${activeConfig.versionCode}). Standard update dialog with "Update" and "Later" actions.`;
+          codePreview.innerText = `Evaluation: remote (${activeConfig.versionCode}) > local (${localVersion}) [OPTIONAL] -> Show standard dialog`;
+        }
+        return;
+      }
+
+      // 5. Up to date
+      badge.className = "font-mono text-xs px-2 py-0.5 bg-slate-800 text-slate-300 border border-slate-700";
+      badge.innerText = "UP TO DATE";
+      title.innerText = "Application is Current";
+      title.className = "text-lg font-bold text-slate-200";
+      desc.innerText = `Installed version (${localVersion}) is equal to or newer than the remote build (${activeConfig.versionCode}). No prompt required.`;
+      codePreview.innerText = `Evaluation: remote (${activeConfig.versionCode}) <= local (${localVersion}) -> Action: None (Idle)`;
+    }
+
+    // Auto-run simulation on page load
+    window.addEventListener('DOMContentLoaded', () => {
+      runSimulation();
+    });
+  </script>
+</body>
+</html>
