@@ -165,7 +165,7 @@ This repository is configured to deploy directly via **GitHub Pages**:
 ---
 
 ## # License & Legal
-This project is licensed under the **Apache License 2.0**.
+This project is licensed under the **MIT License**.
 
 **Liability Protection:** The author provides this software and manifest registry "as is" without warranties. By using this service, you agree that the author is not liable for any damages, service downtime, or issues resulting from its use.
 
@@ -173,7 +173,7 @@ This project is licensed under the **Apache License 2.0**.
 
 ## # Links
 - [Main App Repository](https://github.com/SubhamSathua/screen-harmony-flex) - ScreenHarmony Flex source code.
-- [Apache 2.0 License](LICENSE) - View the full license terms.
+- [MIT License](LICENSE) - View the full license terms.
 
 ---
 
@@ -183,4 +183,4 @@ This project is licensed under the **Apache License 2.0**.
 **Repository:** [app-updates](https://github.com/SubhamSathua/app-updates)
 
 ---
-Copyright © 2026 Subham Kumar Sathua. Licensed under the Apache License 2.0.
+Copyright © 2026 Subham Kumar Sathua. Licensed under the MIT License.
